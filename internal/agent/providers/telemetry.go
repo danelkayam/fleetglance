@@ -13,15 +13,14 @@ func NewTelemetryProvider() *TelemetryProvider {
 }
 
 // GetTelemetry returns the current agent telemetry.
-// TODO: replace static data with host, runtime, and container collectors.
 func (p *TelemetryProvider) GetTelemetry() (*protocol.Telemetry, error) {
-	// TODO - implement this
+	// TODO: replace static data with host, runtime, and container collectors.
 	return &protocol.Telemetry{
 		AgentVersion:  version.Version,
-		Hostname:      "mothership",
+		Hostname:      "dummy-hostname",
 		Timestamp:     time.Now(),
 		UptimeSeconds: 3600,
-		Cpu: &protocol.Cpu{
+		CPU: &protocol.CPU{
 			UsagePercent: 42.5,
 		},
 		Memory: &protocol.Memory{

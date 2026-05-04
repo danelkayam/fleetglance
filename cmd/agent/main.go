@@ -32,26 +32,30 @@ func main() {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
 
-	log.Info()
+	log.Info().Msg("Starting fleetglance agent...")
 
 	agent := agent.NewAgent(agent.Params{
 		Port:  params.Port,
 		Debug: params.Debug,
 	})
 
+	errChan := make(chan error, 1)
 	termChan := make(chan os.Signal, 1)
 	signal.Notify(termChan, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		if err := agent.Start(); err != nil {
-			log.Err(err).Msg("Failed running fleetglance agent")
-			// signals to terminate the server
-			termChan <- syscall.SIGTERM
-			return
-		}
+		errChan <- agent.Start()
 	}()
 
-	<-termChan
+	select {
+	case sig := <-termChan:
+		log.Info().Str("signal", sig.String()).Msg("Received shutdown signal")
+	case err := <-errChan:
+		if err != nil {
+			log.Error().Err(err).Msg("Agent stopped with error")
+		}
+	}
+
 	log.Info().Msg("Shutting down fleetglance agent...")
 
 	if err := agent.Stop(); err != nil {

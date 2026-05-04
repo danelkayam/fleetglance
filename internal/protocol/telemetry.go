@@ -9,14 +9,14 @@ type Telemetry struct {
 	Hostname      string       `json:"hostname"`
 	Timestamp     time.Time    `json:"timestamp"`
 	UptimeSeconds int64        `json:"uptime_seconds"`
-	Cpu           *Cpu         `json:"cpu"`
+	CPU           *CPU         `json:"cpu"`
 	Memory        *Memory      `json:"memory"`
 	Storage       *Storage     `json:"storage"`
 	Temperature   *Temperature `json:"temperature"`
 	Containers    *Containers  `json:"containers"`
 }
 
-type Cpu struct {
+type CPU struct {
 	UsagePercent float64 `json:"usage_percent"`
 }
 

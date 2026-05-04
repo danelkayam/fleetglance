@@ -3,12 +3,10 @@ package protocol
 import "errors"
 
 var (
-	ErrItemNotFound    = errors.New("item not found")
-	ErrItemConflict    = errors.New("item already exists")
-	ErrInvalidArgs     = errors.New("invalid arguments")
-	ErrOperationFailed = errors.New("operation failed")
-	ErrDatabase        = errors.New("database error")
-	ErrInternal        = errors.New("internal error")
+	ErrInvalidArgs          = errors.New("invalid arguments")
+	ErrTelemetryUnavailable = errors.New("telemetry unavailable")
+	ErrTelemetryFailed      = errors.New("telemetry collection failed")
+	ErrInternal             = errors.New("internal error")
 )
 
 var (

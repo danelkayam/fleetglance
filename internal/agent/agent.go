@@ -55,6 +55,12 @@ func (a *Agent) Start() error {
 
 func (a *Agent) Stop() error {
 	log.Info().Msg("Stopping agent...")
+
+	if a.server == nil {
+		log.Info().Msg("Stopping agent... DONE")
+		return nil
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 

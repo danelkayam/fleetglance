@@ -19,17 +19,17 @@ func AbortWithError(c *gin.Context, err error) {
 
 func resolveStatusAndMessage(err error) (int, string) {
 	switch {
-	case errors.Is(err, protocol.ErrItemNotFound):
-		return http.StatusNotFound,
-			fmt.Sprintf("Item not found: %s", err.Error())
-
-	case errors.Is(err, protocol.ErrItemConflict):
-		return http.StatusConflict,
-			fmt.Sprintf("Item conflict: %s", err.Error())
-
 	case errors.Is(err, protocol.ErrInvalidArgs):
 		return http.StatusBadRequest,
-			fmt.Sprintf("Invalid request: %s", err.Error())
+			fmt.Sprintf("Invalid request: %s", err)
+
+	case errors.Is(err, protocol.ErrTelemetryUnavailable):
+		return http.StatusServiceUnavailable,
+			fmt.Sprintf("Telemetry unavailable: %s", err)
+
+	case errors.Is(err, protocol.ErrTelemetryFailed):
+		return http.StatusInternalServerError,
+			fmt.Sprintf("Telemetry collection failed: %s", err)
 
 	case errors.Is(err, protocol.ErrUnauthenticated):
 		return http.StatusUnauthorized,

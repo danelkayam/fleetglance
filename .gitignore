@@ -24,7 +24,7 @@ go.work
 go.work.sum
 
 
-Editor/IDE
+# Editor/IDE
 .idea/
 .vscode/
 
@@ -33,3 +33,4 @@ Editor/IDE
 bin/
 bin-tools/
 build/
+.env

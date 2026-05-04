@@ -1,5 +1,4 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
+# FleetGlance .gitignore
 #
 # Binaries for programs and plugins
 *.exe
@@ -24,9 +23,13 @@ profile.cov
 go.work
 go.work.sum
 
-# env file
-.env
 
-# Editor/IDE
-# .idea/
-# .vscode/
+Editor/IDE
+.idea/
+.vscode/
+
+# project files
+
+bin/
+bin-tools/
+build/

@@ -5,15 +5,15 @@ import (
 )
 
 type Telemetry struct {
-	Agent_version  string      `json:"agent_version"`
-	Hostname       string      `json:"hostname"`
-	Timestamp      time.Time   `json:"timestamp"`
-	Uptime_seconds int64       `json:"uptime_seconds"`
-	Cpu            Cpu         `json:"cpu"`
-	Memory         Memory      `json:"memory"`
-	Storage        Storage     `json:"storage"`
-	Temperature    Temperature `json:"temperature"`
-	Containers     Containers  `json:"containers"`
+	AgentVersion  string       `json:"agent_version"`
+	Hostname      string       `json:"hostname"`
+	Timestamp     time.Time    `json:"timestamp"`
+	UptimeSeconds int64        `json:"uptime_seconds"`
+	Cpu           *Cpu         `json:"cpu"`
+	Memory        *Memory      `json:"memory"`
+	Storage       *Storage     `json:"storage"`
+	Temperature   *Temperature `json:"temperature"`
+	Containers    *Containers  `json:"containers"`
 }
 
 type Cpu struct {
@@ -33,7 +33,7 @@ type Storage struct {
 }
 
 type Temperature struct {
-	Cpu float64 `json:"cpu"`
+	Value float64 `json:"value"`
 }
 
 type Containers struct {

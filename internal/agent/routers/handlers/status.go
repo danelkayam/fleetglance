@@ -13,7 +13,7 @@ func NewStatusHandler() *StatusHandler {
 }
 
 func (h *StatusHandler) BindRoutes(router *gin.Engine) {
-	router.GET("/health", h.Health)
+	router.GET("/healthz", h.Health)
 }
 
 func (h *StatusHandler) Health(c *gin.Context) {

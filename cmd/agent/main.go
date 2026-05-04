@@ -21,8 +21,6 @@ type Params struct {
 }
 
 func main() {
-	fmt.Println("Starting fleetglance agent...")
-
 	params, err := loadParams()
 	if err != nil {
 		fmt.Printf("Error loading parameters: %v\n", err)
@@ -34,18 +32,19 @@ func main() {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
 
+	log.Info()
+
 	agent := agent.NewAgent(agent.Params{
 		Port:  params.Port,
 		Debug: params.Debug,
 	})
 
-	isShuttingDown := false
 	termChan := make(chan os.Signal, 1)
 	signal.Notify(termChan, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		if err := agent.Start(); err != nil && !isShuttingDown {
-			log.Fatal().Err(err).Msg("Failed running fleetglance agent")
+		if err := agent.Start(); err != nil {
+			log.Err(err).Msg("Failed running fleetglance agent")
 			// signals to terminate the server
 			termChan <- syscall.SIGTERM
 			return
@@ -53,7 +52,6 @@ func main() {
 	}()
 
 	<-termChan
-	isShuttingDown = true
 	log.Info().Msg("Shutting down fleetglance agent...")
 
 	if err := agent.Stop(); err != nil {

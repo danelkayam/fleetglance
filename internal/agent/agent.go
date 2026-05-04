@@ -1,10 +1,13 @@
 package agent
 
 import (
+	"context"
+	"errors"
 	"fleetglance/internal/agent/providers"
 	"fleetglance/internal/agent/routers"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog/log"
 )
@@ -42,12 +45,20 @@ func (a *Agent) Start() error {
 
 	log.Info().Msg("Starting agent... DONE")
 
-	return a.server.ListenAndServe()
+	err := a.server.ListenAndServe()
+	if errors.Is(err, http.ErrServerClosed) {
+		return nil
+	}
+
+	return err
 }
 
 func (a *Agent) Stop() error {
 	log.Info().Msg("Stopping agent...")
-	err := a.server.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err := a.server.Shutdown(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("Stopping agent... FAILED")
 		return err

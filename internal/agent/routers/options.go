@@ -21,3 +21,9 @@ func withRequestContextFallback() gin.OptionFunc {
 		e.ContextWithFallback = true
 	}
 }
+
+func withRecovery() gin.OptionFunc {
+	return func(e *gin.Engine) {
+		e.Use(gin.Recovery())
+	}
+}

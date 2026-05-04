@@ -9,12 +9,12 @@ import (
 )
 
 type TelemetryHandler struct {
-	provider providers.TelemetryProvider
+	provider *providers.TelemetryProvider
 }
 
 func NewTelemetryHandler(provider *providers.TelemetryProvider) *TelemetryHandler {
 	return &TelemetryHandler{
-		provider: *provider,
+		provider: provider,
 	}
 }
 

@@ -34,3 +34,4 @@ bin/
 bin-tools/
 build/
 .env
+fleetglance.tar.gz

@@ -22,10 +22,11 @@ func NewRouter(params Params) *gin.Engine {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	router := gin.Default(
+	router := gin.New(
 		withStrictRouting(),
 		withMethodNotAllowed(),
 		withRequestContextFallback(),
+		withRecovery(),
 	)
 
 	statusHandler.BindRoutes(router)

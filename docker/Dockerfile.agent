@@ -1,5 +1,7 @@
-FROM golang:1.26.2 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26.2 AS builder
 
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
 ARG VERSION=dev
 ARG COMMIT=unknown
 ARG BUILT_AT=unknown
@@ -10,7 +12,12 @@ COPY go.mod go.sum Makefile ./
 RUN make mod-download
 
 COPY . .
-RUN make build-agent VERSION="${VERSION}" COMMIT="${COMMIT}" BUILT_AT="${BUILT_AT}"
+RUN make build-agent \
+    GOOS="${TARGETOS}" \
+    GOARCH="${TARGETARCH}" \
+    VERSION="${VERSION}" \
+    COMMIT="${COMMIT}" \
+    BUILT_AT="${BUILT_AT}"
 
 
 FROM alpine:3.23

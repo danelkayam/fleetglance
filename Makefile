@@ -1,5 +1,9 @@
 APP_NAME := fleetglance
 
+GOOS ?= linux
+GOARCH ?= amd64
+PLATFORMS ?= linux/amd64,linux/arm64
+
 BIN_DIR := $(CURDIR)/bin
 BUILD_DIR := $(CURDIR)/build
 BIN_TOOLS_DIR := $(CURDIR)/bin-tools
@@ -28,24 +32,24 @@ AGENT_IMAGE := $(DOCKER_REPO)/$(APP_NAME)-agent
 	help build clean test lint format update  \
 	build-deps clean-deps mod-download mod-tidy \
 	tools-install tools-clean archive \
-	build-agent build-docker-agent push-docker-agent
+	build-agent build-docker-agent push-docker-agent-multi
 
 help:
 	@echo "Available commands:"
-	@echo "  make build         	 - Build the binary"
-	@echo "  make build-agent   	 - Build the agent binary"
-	@echo "  make clean         	 - Clean the build directory"
-	@echo "  make test          	 - Run tests with coverage"
-	@echo "  make lint          	 - Run linting"
-	@echo "  make format        	 - Run code formatting"
-	@echo "  make update        	 - Update go modules"
-	@echo "  make mod-download  	 - Download go module dependencies"
-	@echo "  make mod-tidy      	 - Tidy go module dependencies"
-	@echo "  make tools-install 	 - Install development tools"
-	@echo "  make tools-clean   	 - Clean development tools"
-	@echo "  make archive       	 - Create code archive"
-	@echo "  make build-docker-agent - Build agent docker image"
-	@echo "  make push-docker-agent  - Push agent docker image to registry"
+	@echo "  make build         	 	   - Build the binary"
+	@echo "  make build-agent   	 	   - Build the agent binary"
+	@echo "  make clean         	 	   - Clean the build directory"
+	@echo "  make test          	 	   - Run tests with coverage"
+	@echo "  make lint          	 	   - Run linting"
+	@echo "  make format        	 	   - Run code formatting"
+	@echo "  make update        	 	   - Update go modules"
+	@echo "  make mod-download  	 	   - Download go module dependencies"
+	@echo "  make mod-tidy      	 	   - Tidy go module dependencies"
+	@echo "  make tools-install 	 	   - Install development tools"
+	@echo "  make tools-clean   	 	   - Clean development tools"
+	@echo "  make archive       	 	   - Create code archive"
+	@echo "  make build-docker-agent 	   - Build agent docker image"
+	@echo "  make push-docker-agent-multi  - Push agent docker image to registry"
 
 default: build
 
@@ -53,7 +57,7 @@ build: build-agent
 
 build-agent:
 	@echo "Building $(APP_NAME) agent..."
-	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) \
 		go build -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/agent $(SRC_AGENT)
 
 clean:
@@ -103,16 +107,26 @@ archive:
 build-docker-agent:
 	@echo "Building agent docker image..."
 	@docker build -f $(DOCKER_DIR)/Dockerfile.agent $(CURDIR) \
+		--build-arg TARGETOS=$(GOOS) \
+		--build-arg TARGETARCH=$(GOARCH) \
 		--build-arg VERSION=$(VERSION) \
 		--build-arg COMMIT=$(COMMIT) \
 		--build-arg BUILT_AT=$(BUILT_AT) \
 		-t $(AGENT_IMAGE):$(VERSION) \
 		-t $(AGENT_IMAGE):latest
 
-push-docker-agent:
-	@echo "Pushing agent docker image..."
-	@docker push $(AGENT_IMAGE):$(VERSION)
-	@docker push $(AGENT_IMAGE):latest
+push-docker-agent-multi:
+	@echo "Building and pushing multi-arch agent docker image..."
+	@docker buildx build \
+		-f $(DOCKER_DIR)/Dockerfile.agent \
+		--platform $(PLATFORMS) \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg COMMIT=$(COMMIT) \
+		--build-arg BUILT_AT=$(BUILT_AT) \
+		-t $(AGENT_IMAGE):$(VERSION) \
+		-t $(AGENT_IMAGE):latest \
+		--push \
+		$(CURDIR)
 
 $(BIN_TOOLS_DIR):
 	@mkdir -p $(BIN_TOOLS_DIR)

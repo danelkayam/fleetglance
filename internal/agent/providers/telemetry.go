@@ -3,6 +3,7 @@ package providers
 import (
 	"fleetglance/internal/protocol"
 	"fleetglance/internal/version"
+	"fmt"
 	"time"
 )
 
@@ -15,7 +16,7 @@ func NewTelemetryProvider() *TelemetryProvider {
 // GetTelemetry returns the current agent telemetry.
 func (p *TelemetryProvider) GetTelemetry() (*protocol.Telemetry, error) {
 	return &protocol.Telemetry{
-		AgentVersion:  version.Version,
+		AgentVersion:  fmt.Sprintf("%s-%s", version.Version, version.Commit),
 		Timestamp:     time.Now(),
 		UptimeSeconds: p.getUptimeSeconds(),
 		CPU:           p.getCPU(),

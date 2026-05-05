@@ -22,7 +22,7 @@ LDFLAGS := \
 	help build clean test lint format update  \
 	build-deps clean-deps mod-download mod-tidy \
 	tools-install tools-clean \
-	build-agent
+	build-agent archive
 
 help:
 	@echo "Available commands:"
@@ -37,6 +37,7 @@ help:
 	@echo "  make mod-tidy      - Tidy go module dependencies"
 	@echo "  make tools-install - Install development tools"
 	@echo "  make tools-clean   - Clean development tools"
+	@echo "  make archive       - Create code archive"
 
 default: build
 
@@ -86,6 +87,10 @@ tools-install:
 tools-clean:
 	@echo "Cleaning development tools..."
 	@rm -rf $(BIN_TOOLS_DIR)/*
+
+archive:
+	@echo "Creating code archive..."
+	@git archive --format=tar.gz -o $(APP_NAME)-$(VERSION).tar.gz HEAD
 
 $(BIN_TOOLS_DIR):
 	@mkdir -p $(BIN_TOOLS_DIR)

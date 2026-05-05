@@ -9,35 +9,43 @@ SRC_AGENT := $(CURDIR)/cmd/agent/main.go
 
 COVERAGE_PROFILE := $(CURDIR)/coverage.out
 
-VERSION ?= dev
-COMMIT := $(shell git -C $(CURDIR) rev-parse --short HEAD)
-BUILT_AT := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+BUILT_AT ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
 LDFLAGS := \
 	-X '$(APP_NAME)/internal/version.Version=$(VERSION)' \
 	-X '$(APP_NAME)/internal/version.Commit=$(COMMIT)' \
 	-X '$(APP_NAME)/internal/version.BuiltAt=$(BUILT_AT)'
 
+
+DOCKER_DIR := $(CURDIR)/docker
+
+DOCKER_REPO ?= danelkayam
+AGENT_IMAGE := $(DOCKER_REPO)/$(APP_NAME)-agent
+
 .PHONY: \
 	help build clean test lint format update  \
 	build-deps clean-deps mod-download mod-tidy \
-	tools-install tools-clean \
-	build-agent archive
+	tools-install tools-clean archive \
+	build-agent build-docker-agent push-docker-agent
 
 help:
 	@echo "Available commands:"
-	@echo "  make build         - Build the binary"
-	@echo "  make build-agent   - Build the agent binary"
-	@echo "  make clean         - Clean the build directory"
-	@echo "  make test          - Run tests with coverage"
-	@echo "  make lint          - Run linting"
-	@echo "  make format        - Run code formatting"
-	@echo "  make update        - Update go modules"
-	@echo "  make mod-download  - Download go module dependencies"
-	@echo "  make mod-tidy      - Tidy go module dependencies"
-	@echo "  make tools-install - Install development tools"
-	@echo "  make tools-clean   - Clean development tools"
-	@echo "  make archive       - Create code archive"
+	@echo "  make build         	 - Build the binary"
+	@echo "  make build-agent   	 - Build the agent binary"
+	@echo "  make clean         	 - Clean the build directory"
+	@echo "  make test          	 - Run tests with coverage"
+	@echo "  make lint          	 - Run linting"
+	@echo "  make format        	 - Run code formatting"
+	@echo "  make update        	 - Update go modules"
+	@echo "  make mod-download  	 - Download go module dependencies"
+	@echo "  make mod-tidy      	 - Tidy go module dependencies"
+	@echo "  make tools-install 	 - Install development tools"
+	@echo "  make tools-clean   	 - Clean development tools"
+	@echo "  make archive       	 - Create code archive"
+	@echo "  make build-docker-agent - Build agent docker image"
+	@echo "  make push-docker-agent  - Push agent docker image to registry"
 
 default: build
 
@@ -91,6 +99,20 @@ tools-clean:
 archive:
 	@echo "Creating code archive..."
 	@git archive --format=tar.gz -o $(APP_NAME)-$(VERSION).tar.gz HEAD
+
+build-docker-agent:
+	@echo "Building agent docker image..."
+	@docker build -f $(DOCKER_DIR)/Dockerfile.agent $(CURDIR) \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg COMMIT=$(COMMIT) \
+		--build-arg BUILT_AT=$(BUILT_AT) \
+		-t $(AGENT_IMAGE):$(VERSION) \
+		-t $(AGENT_IMAGE):latest
+
+push-docker-agent:
+	@echo "Pushing agent docker image..."
+	@docker push $(AGENT_IMAGE):$(VERSION)
+	@docker push $(AGENT_IMAGE):latest
 
 $(BIN_TOOLS_DIR):
 	@mkdir -p $(BIN_TOOLS_DIR)

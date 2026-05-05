@@ -15,7 +15,7 @@ import (
 )
 
 type Params struct {
-	Port      int    `env:"PORT" envDefault:"7865" validate:"min=1,max=65535"`
+	Port      int    `env:"PORT" envDefault:"9800" validate:"min=1,max=65535"`
 	Debug     bool   `env:"DEBUG" envDefault:"false"`
 	LogFormat string `env:"LOG_FORMAT" envDefault:"console" validate:"oneof=console json"`
 }

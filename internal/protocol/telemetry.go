@@ -6,7 +6,6 @@ import (
 
 type Telemetry struct {
 	AgentVersion  string      `json:"agent_version"`
-	Hostname      string      `json:"hostname"`
 	Timestamp     time.Time   `json:"timestamp"`
 	UptimeSeconds int64       `json:"uptime_seconds"`
 	CPU           *CPU        `json:"cpu"`

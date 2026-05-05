@@ -16,7 +16,6 @@ func NewTelemetryProvider() *TelemetryProvider {
 func (p *TelemetryProvider) GetTelemetry() (*protocol.Telemetry, error) {
 	return &protocol.Telemetry{
 		AgentVersion:  version.Version,
-		Hostname:      p.getHostname(),
 		Timestamp:     time.Now(),
 		UptimeSeconds: p.getUptimeSeconds(),
 		CPU:           p.getCPU(),

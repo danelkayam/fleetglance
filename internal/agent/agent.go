@@ -43,6 +43,7 @@ func (a *Agent) Start() error {
 		Handler: router,
 	}
 
+	log.Info().Msgf("Agent listening on: %v", a.server.Addr)
 	log.Info().Msg("Starting agent... DONE")
 
 	err := a.server.ListenAndServe()

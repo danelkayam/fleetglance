@@ -125,6 +125,8 @@ push-docker-agent-multi:
 		--build-arg BUILT_AT=$(BUILT_AT) \
 		-t $(AGENT_IMAGE):$(VERSION) \
 		-t $(AGENT_IMAGE):latest \
+		--no-cache \
+		--provenance=false \
 		--push \
 		$(CURDIR)
 

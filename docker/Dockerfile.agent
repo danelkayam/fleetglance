@@ -15,14 +15,8 @@ RUN make build-agent VERSION="${VERSION}" COMMIT="${COMMIT}" BUILT_AT="${BUILT_A
 
 FROM alpine:3.23
 
-RUN adduser -D -g '' agent_user && \
-    mkdir /app && \
-    chown agent_user:agent_user /app
-
 WORKDIR /app
 
-COPY --from=builder --chown=agent_user:agent_user /build/bin/agent /app/agent
+COPY --from=builder /build/bin/agent /app/agent
 
-USER agent_user
-
-CMD [ "/app/agent" ]
+CMD ["/app/agent"]

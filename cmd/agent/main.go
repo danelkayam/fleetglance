@@ -34,17 +34,19 @@ func main() {
 
 	log.Info().Msg("Starting fleetglance agent...")
 
-	agent := agent.NewAgent(agent.Params{
+	a := agent.NewAgent(agent.Params{
 		Port:  params.Port,
 		Debug: params.Debug,
 	})
 
 	errChan := make(chan error, 1)
 	termChan := make(chan os.Signal, 1)
+
 	signal.Notify(termChan, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(termChan)
 
 	go func() {
-		errChan <- agent.Start()
+		errChan <- a.Start()
 	}()
 
 	select {
@@ -58,7 +60,7 @@ func main() {
 
 	log.Info().Msg("Shutting down fleetglance agent...")
 
-	if err := agent.Stop(); err != nil {
+	if err := a.Stop(); err != nil {
 		log.Error().Err(err).Msg("Failed stopping fleetglance agent")
 	}
 

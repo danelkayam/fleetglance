@@ -35,3 +35,4 @@ bin-tools/
 build/
 .env
 fleetglance*.tar.gz
+fleet*.yaml

@@ -10,6 +10,8 @@ BIN_TOOLS_DIR := $(CURDIR)/bin-tools
 
 BIN_AGENT := $(BIN_DIR)/agent
 SRC_AGENT := $(CURDIR)/cmd/agent/main.go
+BIN_CONSOLE := $(BIN_DIR)/console
+SRC_CONSOLE := $(CURDIR)/cmd/console/main.go
 
 COVERAGE_PROFILE := $(CURDIR)/coverage.out
 
@@ -32,12 +34,13 @@ AGENT_IMAGE := $(DOCKER_REPO)/$(APP_NAME)-agent
 	help build clean test lint format update  \
 	build-deps clean-deps mod-download mod-tidy \
 	tools-install tools-clean archive \
-	build-agent build-docker-agent push-docker-agent-multi
+	build-agent build-console build-docker-agent push-docker-agent-multi
 
 help:
 	@echo "Available commands:"
 	@echo "  make build         	 	   - Build the binary"
 	@echo "  make build-agent   	 	   - Build the agent binary"
+	@echo "  make build-console 	 	   - Build the console binary"
 	@echo "  make clean         	 	   - Clean the build directory"
 	@echo "  make test          	 	   - Run tests with coverage"
 	@echo "  make lint          	 	   - Run linting"
@@ -53,12 +56,17 @@ help:
 
 default: build
 
-build: build-agent
+build: build-agent build-console
 
 build-agent:
 	@echo "Building $(APP_NAME) agent..."
 	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) \
-		go build -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/agent $(SRC_AGENT)
+		go build -ldflags "$(LDFLAGS)" -o $(BIN_AGENT) $(SRC_AGENT)
+
+build-console:
+	@echo "Building $(APP_NAME) console..."
+	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) \
+		go build -ldflags "$(LDFLAGS)" -o $(BIN_CONSOLE) $(SRC_CONSOLE)
 
 clean:
 	@echo "Cleaning $(APP_NAME) build artifacts..."

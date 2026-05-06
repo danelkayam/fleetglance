@@ -222,6 +222,86 @@ func TestUnknownRoute(t *testing.T) {
 	}
 }
 
+func TestMethodNotAllowed(t *testing.T) {
+	tests := []struct {
+		name   string
+		method string
+		path   string
+	}{
+		{
+			name:   "health",
+			method: http.MethodPost,
+			path:   "/healthz",
+		},
+		{
+			name:   "telemetry",
+			method: http.MethodPost,
+			path:   "/api/telemetry",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			router := NewRouter(Params{
+				Debug: false,
+				TelemetryProvider: fakeTelemetryProvider{
+					telemetry: testTelemetry(),
+				},
+			})
+
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(tt.method, tt.path, nil)
+			router.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusMethodNotAllowed {
+				t.Fatalf("expected status %d, got %d", http.StatusMethodNotAllowed, rec.Code)
+			}
+		})
+	}
+}
+
+func TestStrictRouting(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+	}{
+		{
+			name: "health trailing slash",
+			path: "/healthz/",
+		},
+		{
+			name: "telemetry trailing slash",
+			path: "/api/telemetry/",
+		},
+		{
+			name: "telemetry extra slash",
+			path: "/api//telemetry",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			router := NewRouter(Params{
+				Debug: false,
+				TelemetryProvider: fakeTelemetryProvider{
+					telemetry: testTelemetry(),
+				},
+			})
+
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			router.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusNotFound {
+				t.Fatalf("expected status %d, got %d", http.StatusNotFound, rec.Code)
+			}
+			if location := rec.Header().Get("Location"); location != "" {
+				t.Fatalf("expected no redirect location, got %q", location)
+			}
+		})
+	}
+}
+
 func testTelemetry() *protocol.Telemetry {
 	return &protocol.Telemetry{
 		AgentVersion:  "test-version",

@@ -7,7 +7,7 @@ import (
 	"github.com/shirou/gopsutil/v4/cpu"
 )
 
-func (p *TelemetryProvider) getCPU() *protocol.CPU {
+func (p *provider) getCPU() *protocol.CPU {
 	values, err := cpu.Percent(0, false)
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed collecting CPU telemetry")

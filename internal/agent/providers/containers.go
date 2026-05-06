@@ -12,7 +12,7 @@ import (
 
 const dockerTelemetryTimeout = 2 * time.Second
 
-func (p *TelemetryProvider) getContainers() *protocol.Containers {
+func (p *provider) getContainers() *protocol.Containers {
 	apiClient, err := client.New(
 		client.WithTimeout(dockerTelemetryTimeout),
 	)

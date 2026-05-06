@@ -7,14 +7,18 @@ import (
 	"time"
 )
 
-type TelemetryProvider struct{}
+type TelemetryProvider interface {
+	GetTelemetry() (*protocol.Telemetry, error)
+}
 
-func NewTelemetryProvider() *TelemetryProvider {
-	return &TelemetryProvider{}
+type provider struct{}
+
+func New() TelemetryProvider {
+	return &provider{}
 }
 
 // GetTelemetry returns the current agent telemetry.
-func (p *TelemetryProvider) GetTelemetry() (*protocol.Telemetry, error) {
+func (p *provider) GetTelemetry() (*protocol.Telemetry, error) {
 	return &protocol.Telemetry{
 		AgentVersion:  fmt.Sprintf("%s-%s", version.Version, version.Commit),
 		Timestamp:     time.Now(),

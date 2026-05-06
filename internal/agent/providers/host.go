@@ -5,7 +5,7 @@ import (
 	"github.com/shirou/gopsutil/v4/host"
 )
 
-func (p *TelemetryProvider) getUptimeSeconds() int64 {
+func (p *provider) getUptimeSeconds() int64 {
 	uptime, err := host.Uptime()
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed collecting uptime telemetry")

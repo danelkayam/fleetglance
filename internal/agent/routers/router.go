@@ -9,7 +9,7 @@ import (
 
 type Params struct {
 	Debug             bool
-	TelemetryProvider *providers.TelemetryProvider
+	TelemetryProvider providers.TelemetryProvider
 }
 
 func NewRouter(params Params) *gin.Engine {

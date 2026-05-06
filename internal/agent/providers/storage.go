@@ -7,7 +7,7 @@ import (
 	"github.com/shirou/gopsutil/v4/disk"
 )
 
-func (p *TelemetryProvider) getStorage() *protocol.Storage {
+func (p *provider) getStorage() *protocol.Storage {
 	usage, err := disk.Usage("/")
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed collecting storage telemetry")

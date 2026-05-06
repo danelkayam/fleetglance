@@ -19,14 +19,14 @@ type Params struct {
 
 type Agent struct {
 	params            Params
-	telemetryProvider *providers.TelemetryProvider
+	telemetryProvider providers.TelemetryProvider
 	server            *http.Server
 }
 
 func NewAgent(params Params) *Agent {
 	return &Agent{
 		params:            params,
-		telemetryProvider: providers.NewTelemetryProvider(),
+		telemetryProvider: providers.New(),
 	}
 }
 

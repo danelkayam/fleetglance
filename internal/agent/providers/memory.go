@@ -7,7 +7,7 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 )
 
-func (p *TelemetryProvider) getMemory() *protocol.Memory {
+func (p *provider) getMemory() *protocol.Memory {
 	vm, err := mem.VirtualMemory()
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed collecting memory telemetry")

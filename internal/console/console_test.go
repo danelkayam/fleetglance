@@ -2,9 +2,14 @@ package console
 
 import (
 	"fleetglance/internal/console/config"
+	"fleetglance/internal/console/engine"
+	"io"
 	"strings"
+	"sync"
 	"testing"
 	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestConsoleStartValidatesFleet(t *testing.T) {
@@ -51,6 +56,11 @@ func TestConsoleStartValidatesFleet(t *testing.T) {
 			},
 			wantErr: `ship "donnager" url must be absolute http/https URL`,
 		},
+		{
+			name:    "too many ships",
+			fleet:   testFleetWithShips(9),
+			wantErr: "fleet supports at most 8 ships",
+		},
 	}
 
 	for _, tt := range tests {
@@ -69,6 +79,19 @@ func TestConsoleStartValidatesFleet(t *testing.T) {
 	}
 }
 
+func testFleetWithShips(count int) *config.Fleet {
+	ships := make(map[string]config.Ship, count)
+	for i := range count {
+		name := "ship" + string(rune('a'+i))
+		ships[name] = config.Ship{URL: "http://" + name + ":9800"}
+	}
+
+	return &config.Fleet{
+		Version: 1,
+		Ships:   ships,
+	}
+}
+
 func TestConsoleStartStops(t *testing.T) {
 	c := NewConsole(&config.Fleet{
 		Version: 1,
@@ -76,6 +99,9 @@ func TestConsoleStartStops(t *testing.T) {
 			"donnager": {URL: "http://donnager:9800"},
 		},
 	})
+	fakeEngine := &fakeEngine{events: make(chan engine.Event)}
+	c.engine = fakeEngine
+	c.programOptions = quietProgramOptions()
 
 	errChan := make(chan error, 1)
 	go func() {
@@ -86,6 +112,10 @@ func TestConsoleStartStops(t *testing.T) {
 	case err := <-errChan:
 		t.Fatalf("start returned before stop: %v", err)
 	case <-time.After(10 * time.Millisecond):
+	}
+
+	if !fakeEngine.started {
+		t.Fatal("engine was not started")
 	}
 
 	if err := c.Stop(); err != nil {
@@ -103,5 +133,33 @@ func TestConsoleStartStops(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("start did not stop")
+	}
+}
+
+type fakeEngine struct {
+	events  chan engine.Event
+	started bool
+	once    sync.Once
+}
+
+func (f *fakeEngine) Start() (<-chan engine.Event, error) {
+	f.started = true
+	return f.events, nil
+}
+
+func (f *fakeEngine) Stop() error {
+	f.once.Do(func() {
+		close(f.events)
+	})
+	return nil
+}
+
+func quietProgramOptions() []tea.ProgramOption {
+	return []tea.ProgramOption{
+		tea.WithInput(nil),
+		tea.WithOutput(io.Discard),
+		tea.WithoutRenderer(),
+		tea.WithoutSignalHandler(),
+		tea.WithoutSignals(),
 	}
 }

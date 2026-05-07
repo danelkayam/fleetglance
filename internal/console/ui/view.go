@@ -20,22 +20,23 @@ const (
 )
 
 const (
-	screenPaddingX = 4
-	screenPaddingY = 2
+	screenPaddingX = 2
+	screenPaddingY = 1
 	gridGapX       = 2
 	gridGapY       = 1
 	headerGridGap  = 2
-	panePaddingX   = 2
+	panePaddingX   = 1
 	panePaddingY   = 1
 )
 
 const (
-	iconColWidth       = 2
-	metricLabelWidth   = 8
-	metricValueWidth   = 8
-	metricPercentWidth = 6
-	metricBarGap       = 2
-	minProgressBarLen  = 3
+	iconColWidth        = 2
+	metricLabelWidth    = 8
+	metricBarLabelWidth = 4
+	metricValueWidth    = 8
+	metricPercentWidth  = 6
+	metricBarGap        = 1
+	minProgressBarLen   = 3
 )
 
 const (
@@ -303,17 +304,15 @@ func renderValueRow(icon string, label string, value string, width int) string {
 }
 
 func renderMetricRow(icon string, label string, value *float64, color string, width int) string {
+	left := rowLabel(icon, label, metricBarLabelWidth)
+	leftWidth := lipgloss.Width(left)
+
 	if value == nil {
-		left := rowLabel(icon, label, metricLabelWidth)
-		right := valueCell(dimValueStyle.Render("--"), valueWidth(width, lipgloss.Width(left), 2))
+		right := valueCell(dimValueStyle.Render("--"), valueWidth(width, leftWidth, 2))
 		return fillLine(joinLeftRight(left, right, width), width)
 	}
 
 	formatted := formatPercent(*value)
-	labelWidth := metricLabelColumnWidth(label, width)
-	leftWidth := rowLabelWidth(labelWidth)
-	left := rowLabel(icon, label, labelWidth)
-	left = rowStyle.Inline(true).Width(leftWidth).MaxWidth(leftWidth).Render(left)
 	percent := valueCell(valueStyle.Render(formatted), metricPercentWidth)
 	barWidth := width - leftWidth - metricBarGap - 1 - metricPercentWidth
 	if barWidth < minProgressBarLen {
@@ -327,8 +326,17 @@ func renderMetricRow(icon string, label string, value *float64, color string, wi
 
 func rowLabel(icon string, label string, width int) string {
 	iconText := iconCell(icon, neutralIconStyle)
-	labelText := labelStyle.Inline(true).Width(width).MaxWidth(width).Render(label)
+	labelText := labelStyle.Inline(true).Render(padRight(label, width))
 	return iconText + " " + labelText
+}
+
+func padRight(s string, width int) string {
+	currentWidth := lipgloss.Width(s)
+	if currentWidth >= width {
+		return s
+	}
+
+	return s + strings.Repeat(" ", width-currentWidth)
 }
 
 func iconCell(icon string, style lipgloss.Style) string {
@@ -511,15 +519,6 @@ func valueLabelWidth(label string, rowWidth int) int {
 	}
 
 	return max(min(metricLabelWidth, max(lipgloss.Width(label), 1)), 1)
-}
-
-func metricLabelColumnWidth(label string, rowWidth int) int {
-	fullLeftWidth := rowLabelWidth(metricLabelWidth)
-	if rowWidth-fullLeftWidth-metricBarGap-1-metricPercentWidth >= minProgressBarLen {
-		return metricLabelWidth
-	}
-
-	return max(min(metricLabelWidth, lipgloss.Width(label)), 1)
 }
 
 func rowLabelWidth(labelWidth int) int {

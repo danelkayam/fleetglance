@@ -76,10 +76,11 @@ func TestTelemetryNilSectionsSerializeAsNull(t *testing.T) {
 }
 
 func TestResponseEnvelopeJSONShape(t *testing.T) {
-	response := Response{
-		Data: map[string]string{
-			"status": "ok",
-		},
+	data := map[string]string{
+		"status": "ok",
+	}
+	response := Response[map[string]string]{
+		Data:  &data,
 		Error: nil,
 	}
 
@@ -94,7 +95,7 @@ func TestResponseEnvelopeJSONShape(t *testing.T) {
 }
 
 func TestErrorResponseEnvelopeJSONShape(t *testing.T) {
-	response := Response{
+	response := Response[struct{}]{
 		Data: nil,
 		Error: &ResponseError{
 			Message: "failed",

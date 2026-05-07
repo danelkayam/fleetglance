@@ -17,6 +17,6 @@ func (p *provider) getStorage() *protocol.Storage {
 	return &protocol.Storage{
 		UsedBytes:    int64(usage.Used),
 		TotalBytes:   int64(usage.Total),
-		UsagePercent: usage.UsedPercent,
+		UsagePercent: roundPercent(usage.UsedPercent),
 	}
 }

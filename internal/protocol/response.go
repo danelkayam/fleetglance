@@ -1,7 +1,7 @@
 package protocol
 
-type Response struct {
-	Data  any            `json:"data"`
+type Response[T any] struct {
+	Data  *T             `json:"data"`
 	Error *ResponseError `json:"error,omitempty"`
 }
 

@@ -17,6 +17,6 @@ func (p *provider) getMemory() *protocol.Memory {
 	return &protocol.Memory{
 		UsedBytes:    int64(vm.Used),
 		TotalBytes:   int64(vm.Total),
-		UsagePercent: vm.UsedPercent,
+		UsagePercent: roundPercent(vm.UsedPercent),
 	}
 }

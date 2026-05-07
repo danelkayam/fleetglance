@@ -18,5 +18,13 @@ func LoadFleet(path string) (*Fleet, error) {
 		return nil, fmt.Errorf("parse fleet config %q: %w", path, err)
 	}
 
+	if fleet.PullInterval == 0 {
+		fleet.PullInterval = defaultPullInterval
+	}
+
+	if fleet.Timeout == 0 {
+		fleet.Timeout = defaultTimeout
+	}
+
 	return &fleet, nil
 }

@@ -11,7 +11,7 @@ import (
 
 func AbortWithError(c *gin.Context, err error) {
 	status, message := resolveStatusAndMessage(err)
-	c.AbortWithStatusJSON(status, protocol.Response{
+	c.AbortWithStatusJSON(status, protocol.Response[any]{
 		Data:  nil,
 		Error: &protocol.ResponseError{Message: message},
 	})

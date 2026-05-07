@@ -20,6 +20,6 @@ func (p *provider) getCPU() *protocol.CPU {
 	}
 
 	return &protocol.CPU{
-		UsagePercent: values[0],
+		UsagePercent: roundPercent(values[0]),
 	}
 }

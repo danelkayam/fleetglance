@@ -29,8 +29,8 @@ func (h *TelemetryHandler) GetTelemetry(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, protocol.Response{
-		Data:  telemetry,
+	c.JSON(http.StatusOK, protocol.Response[*protocol.Telemetry]{
+		Data:  &telemetry,
 		Error: nil,
 	})
 }

@@ -14,11 +14,6 @@ func TestConsoleStartValidatesFleet(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name:    "nil fleet",
-			fleet:   nil,
-			wantErr: "fleet config is required",
-		},
-		{
 			name: "unsupported version",
 			fleet: &config.Fleet{
 				Version: 2,

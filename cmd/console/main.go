@@ -24,8 +24,8 @@ type Params struct {
 func main() {
 	params, err := loadParams(os.Args[1:])
 	if err != nil {
-		fmt.Printf("Error loading parameters: %v\n", err)
-		return
+		fmt.Fprintf(os.Stderr, "Error loading parameters: %v\n", err)
+		os.Exit(1)
 	}
 
 	// init logger
@@ -38,7 +38,7 @@ func main() {
 	fleet, err := config.LoadFleet(params.ConfigPath)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed loading fleet config")
-		return
+		os.Exit(1)
 	}
 
 	c := console.NewConsole(fleet)
@@ -53,12 +53,14 @@ func main() {
 		errChan <- c.Start()
 	}()
 
+	exitCode := 0
 	select {
 	case sig := <-termChan:
 		log.Info().Str("signal", sig.String()).Msg("Received shutdown signal")
 	case err := <-errChan:
 		if err != nil {
 			log.Error().Err(err).Msg("Console stopped with error")
+			exitCode = 1
 		}
 	}
 
@@ -66,9 +68,14 @@ func main() {
 
 	if err := c.Stop(); err != nil {
 		log.Error().Err(err).Msg("Failed stopping fleetglance console")
+		exitCode = 1
 	}
 
 	log.Info().Msg("Shutting down fleetglance console... DONE")
+
+	if exitCode != 0 {
+		os.Exit(exitCode)
+	}
 }
 
 func loadParams(args []string) (*Params, error) {

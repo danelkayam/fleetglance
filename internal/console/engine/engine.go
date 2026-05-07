@@ -2,7 +2,9 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"fleetglance/internal/console/config"
+	"sort"
 	"sync"
 	"time"
 )
@@ -15,6 +17,7 @@ type Engine interface {
 type engine struct {
 	ships []*Ship
 
+	mu      sync.Mutex
 	started bool
 	ctx     context.Context
 	cancel  context.CancelFunc
@@ -34,14 +37,21 @@ func New(fleet *config.Fleet) Engine {
 }
 
 func (e *engine) Start() (<-chan Event, error) {
+	e.mu.Lock()
+	if e.started {
+		e.mu.Unlock()
+		return nil, errors.New("engine already started")
+	}
 	e.started = true
+	ctx := e.ctx
+	e.mu.Unlock()
 
 	out := make(chan Event, len(e.ships))
 	var wg sync.WaitGroup
 
 	for _, ship := range e.ships {
 		wg.Go(func() {
-			streamTelemetry(e.ctx, ship, out)
+			streamTelemetry(ctx, ship, out)
 		})
 	}
 
@@ -55,19 +65,31 @@ func (e *engine) Start() (<-chan Event, error) {
 }
 
 func (e *engine) Stop() error {
-	if e.started {
-		e.started = false
-
-		e.cancel()
-		<-e.done
+	e.mu.Lock()
+	if !e.started {
+		e.mu.Unlock()
+		return nil
 	}
+	cancel := e.cancel
+	done := e.done
+	e.mu.Unlock()
+
+	cancel()
+	<-done
 
 	return nil
 }
 
 func toShips(fleet *config.Fleet) []*Ship {
 	ships := make([]*Ship, 0, len(fleet.Ships))
-	for name, shipConfig := range fleet.Ships {
+	names := make([]string, 0, len(fleet.Ships))
+	for name := range fleet.Ships {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		shipConfig := fleet.Ships[name]
 		ships = append(ships, &Ship{
 			Name:         name,
 			URL:          shipConfig.URL,

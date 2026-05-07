@@ -6,6 +6,7 @@ import (
 	"fleetglance/internal/console/engine"
 	"fleetglance/internal/protocol"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -34,11 +35,22 @@ func TestNewModelIncludesConfiguredShipsSorted(t *testing.T) {
 	}
 }
 
-func TestNewModelCapsShipsAtVersionLimit(t *testing.T) {
+func TestNewModelDoesNotTruncateShips(t *testing.T) {
 	model := NewModel(testFleetWithShips(9))
 
-	if len(model.shipNames) != MaxShips {
-		t.Fatalf("ship count = %d, want %d", len(model.shipNames), MaxShips)
+	if len(model.shipNames) != 9 {
+		t.Fatalf("ship count = %d, want %d", len(model.shipNames), 9)
+	}
+}
+
+func TestPendingShipStatus(t *testing.T) {
+	ship := shipState{}
+
+	if got := ship.statusLabel(); got != "PENDING" {
+		t.Fatalf("status label = %q, want %q", got, "PENDING")
+	}
+	if got := ship.statusValue(); got != "--" {
+		t.Fatalf("status value = %q, want %q", got, "--")
 	}
 }
 
@@ -113,6 +125,114 @@ func TestNilTelemetrySectionsRenderWithoutPanic(t *testing.T) {
 	}
 }
 
+func TestPendingShipsRenderPendingStatus(t *testing.T) {
+	model := newTestModel()
+
+	view := model.View()
+	if !strings.Contains(view, "PENDING") {
+		t.Fatalf("view should include pending status; got %q", view)
+	}
+	if !strings.Contains(view, "--") {
+		t.Fatalf("view should include pending status value; got %q", view)
+	}
+}
+
+func TestTopBarIsSingleLine(t *testing.T) {
+	model := newTestModel()
+
+	topBar := model.renderTopBar(80)
+	if height := lipgloss.Height(topBar); height != 1 {
+		t.Fatalf("top bar height = %d, want 1", height)
+	}
+	if strings.Contains(topBar, "CONSOLE") {
+		t.Fatalf("top bar should not include subtitle; got %q", topBar)
+	}
+}
+
+func TestConstrainedCompactPaneShowsAllSummaryRows(t *testing.T) {
+	pane := renderPane(shipState{
+		name: "ship-a",
+		telemetry: &protocol.Telemetry{
+			UptimeSeconds: 90,
+			CPU:           &protocol.CPU{UsagePercent: 50},
+			Memory:        &protocol.Memory{UsagePercent: 50},
+			Storage:       &protocol.Storage{UsagePercent: 50},
+			Containers:    &protocol.Containers{Running: 1, Total: 2},
+		},
+		seen: true,
+	}, 0, 27, 9, true)
+
+	for _, want := range []string{"STATUS", "CPU", "RAM", "DISK", "UPTIME", "CONT"} {
+		if !strings.Contains(pane, want) {
+			t.Fatalf("compact pane should include %q; got %q", want, pane)
+		}
+	}
+}
+
+func TestCompactPaneHeaderGap(t *testing.T) {
+	lines := addPaneHeaderGap([]string{"header", "STATUS"}, 10)
+
+	if len(lines) != 3 {
+		t.Fatalf("line count = %d, want 3", len(lines))
+	}
+	if width := lipgloss.Width(lines[1]); width != 10 {
+		t.Fatalf("header gap width = %d, want 10", width)
+	}
+	if strings.TrimSpace(stripANSI(lines[1])) != "" {
+		t.Fatalf("header gap should be blank; got %q", lines[1])
+	}
+}
+
+func TestNarrowMetricRowKeepsProgressBar(t *testing.T) {
+	value := 50.0
+	row := renderMetricRow(icons.cpu, "CPU", &value, colorCPU, 21)
+
+	if !strings.Contains(row, "█") {
+		t.Fatalf("metric row should include progress bar; got %q", row)
+	}
+	if !strings.Contains(row, "50.0%") {
+		t.Fatalf("metric row should include value; got %q", row)
+	}
+}
+
+func TestMetricRowsAlignBarsAndReservePercentWidth(t *testing.T) {
+	width := 25
+	values := []float64{1.8, 11.2, 19.4, 100}
+	rows := []string{
+		renderMetricRow(icons.cpu, "CPU", &values[0], colorCPU, width),
+		renderMetricRow(icons.ram, "RAM", &values[1], colorRAM, width),
+		renderMetricRow(icons.disk, "DISK", &values[2], colorDisk, width),
+		renderMetricRow(icons.disk, "DISK", &values[3], colorDisk, width),
+	}
+
+	barStart := -1
+	for _, row := range rows {
+		plain := stripANSI(row)
+		before, _, ok := strings.Cut(plain, "█")
+		if !ok {
+			t.Fatalf("metric row should include progress bar; got %q", row)
+		}
+
+		start := lipgloss.Width(before)
+		if barStart == -1 {
+			barStart = start
+		}
+		if start != barStart {
+			t.Fatalf("bar start = %d, want %d in row %q", start, barStart, row)
+		}
+	}
+
+	plain := stripANSI(rows[3])
+	if !strings.Contains(plain, "100.0%") {
+		t.Fatalf("metric row should reserve width for 100.0%%; got %q", rows[3])
+	}
+
+	wantBarWidth := width - rowLabelWidth(metricLabelWidth) - metricBarGap - 1 - metricPercentWidth
+	if got := strings.Count(plain, "█"); got != wantBarWidth {
+		t.Fatalf("full bar width = %d, want %d in row %q", got, wantBarWidth, rows[3])
+	}
+}
+
 func TestViewDoesNotExceedModelWidth(t *testing.T) {
 	model := NewModel(testFleetWithShips(7))
 	model.width = 80
@@ -130,14 +250,20 @@ func TestViewDoesNotExceedModelWidth(t *testing.T) {
 	}
 }
 
-func TestCompactLayoutKeepsSevenShipsInTwoRowsAt80x24(t *testing.T) {
-	layout := chooseGridLayout(76, 19, 7)
+var ansiPattern = regexp.MustCompile(`\x1b\[[0-9;:]*m`)
+
+func stripANSI(value string) string {
+	return ansiPattern.ReplaceAllString(value, "")
+}
+
+func TestCompactLayoutKeepsSevenShipsInFourColumnsAt80x24(t *testing.T) {
+	layout := chooseGridLayout(76, 16, 7)
 
 	if layout.columns != 4 {
 		t.Fatalf("columns = %d, want 4", layout.columns)
 	}
-	if layout.paneHeight != compactPaneHeight {
-		t.Fatalf("pane height = %d, want %d", layout.paneHeight, compactPaneHeight)
+	if layout.paneHeight != 7 {
+		t.Fatalf("pane height = %d, want %d", layout.paneHeight, 7)
 	}
 	if !layout.compact {
 		t.Fatal("layout should be compact")

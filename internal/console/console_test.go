@@ -19,6 +19,11 @@ func TestConsoleStartValidatesFleet(t *testing.T) {
 		wantErr string
 	}{
 		{
+			name:    "nil fleet",
+			fleet:   nil,
+			wantErr: "fleet config is required",
+		},
+		{
 			name: "unsupported version",
 			fleet: &config.Fleet{
 				Version: 2,
@@ -89,6 +94,24 @@ func testFleetWithShips(count int) *config.Fleet {
 	return &config.Fleet{
 		Version: 1,
 		Ships:   ships,
+	}
+}
+
+func TestNewConsoleNilFleetDoesNotPanic(t *testing.T) {
+	c := NewConsole(nil)
+	if c == nil {
+		t.Fatal("console should be created")
+	}
+	if c.engine != nil {
+		t.Fatal("engine should not be constructed before Start")
+	}
+}
+
+func TestConsoleStopBeforeEngineStartIsSafe(t *testing.T) {
+	c := NewConsole(nil)
+
+	if err := c.Stop(); err != nil {
+		t.Fatalf("stop failed: %v", err)
 	}
 }
 

@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"regexp"
+	"strings"
 	"time"
 
 	"fleetglance/internal/protocol"
 )
 
-var telemetryPathPattern = regexp.MustCompile(`/api/telemetry$`)
+const telemetryPath = "/api/telemetry"
 
 type Client struct {
 	httpClient *http.Client
@@ -61,10 +61,10 @@ func (c *Client) Get(ctx context.Context, shipUrl string) (*protocol.Telemetry, 
 	return response.Data, nil
 }
 
-func appendPath(url string) string {
-	if telemetryPathPattern.MatchString(url) {
-		return url
+func appendPath(raw string) string {
+	if strings.HasSuffix(raw, telemetryPath) {
+		return raw
 	}
 
-	return fmt.Sprintf("%s/api/telemetry", url)
+	return strings.TrimRight(raw, "/") + telemetryPath
 }

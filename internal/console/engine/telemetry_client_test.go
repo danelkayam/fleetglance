@@ -96,6 +96,34 @@ func TestClientGetTelemetryDoesNotDuplicateTelemetryPath(t *testing.T) {
 	}
 }
 
+func TestAppendPath(t *testing.T) {
+	tests := []struct {
+		raw  string
+		want string
+	}{
+		{
+			raw:  "http://host:9800",
+			want: "http://host:9800/api/telemetry",
+		},
+		{
+			raw:  "http://host:9800/",
+			want: "http://host:9800/api/telemetry",
+		},
+		{
+			raw:  "http://host:9800/api/telemetry",
+			want: "http://host:9800/api/telemetry",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.raw, func(t *testing.T) {
+			if got := appendPath(tt.raw); got != tt.want {
+				t.Fatalf("appendPath(%q) = %q, want %q", tt.raw, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestClientGetTelemetryErrors(t *testing.T) {
 	tests := []struct {
 		name    string

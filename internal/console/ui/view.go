@@ -9,13 +9,36 @@ import (
 )
 
 const (
-	minPaneWidth          = 17
-	preferredPaneWidth    = 40
-	maxPaneColumns        = 4
-	gridGap               = 2
-	gridRowGap            = 1
-	detailedPaneHeight    = 15
-	compactPaneHeight     = 9
+	maxPaneColumns = 4
+)
+
+const (
+	preferredPaneWidth = 40
+	minPaneWidth       = 17
+	detailedPaneHeight = 17
+	compactPaneHeight  = 12
+)
+
+const (
+	screenPaddingX = 4
+	screenPaddingY = 2
+	gridGapX       = 2
+	gridGapY       = 1
+	headerGridGap  = 2
+	panePaddingX   = 2
+	panePaddingY   = 1
+)
+
+const (
+	iconColWidth       = 2
+	metricLabelWidth   = 8
+	metricValueWidth   = 8
+	metricPercentWidth = 6
+	metricBarGap       = 2
+	minProgressBarLen  = 3
+)
+
+const (
 	defaultTerminalWidth  = 80
 	defaultTerminalHeight = 24
 )
@@ -36,13 +59,16 @@ func (m Model) View() string {
 
 	header := m.renderTopBar(contentWidth)
 	headerHeight := lipgloss.Height(header)
-	gridHeight := max(contentHeight-headerHeight-1, 1)
+	gridHeight := max(contentHeight-headerHeight-headerGridGap, 1)
 	layout := chooseGridLayout(contentWidth, gridHeight, len(m.shipNames))
 	grid := m.renderGrid(contentWidth, layout)
 
 	contentParts := []string{header}
 	if grid != "" && gridHeight > 0 {
-		contentParts = append(contentParts, "", grid)
+		for range headerGridGap {
+			contentParts = append(contentParts, "")
+		}
+		contentParts = append(contentParts, grid)
 	}
 	content := contentStyle.Render(lipgloss.JoinVertical(lipgloss.Left, contentParts...))
 	content = contentStyle.
@@ -67,14 +93,12 @@ func (m Model) View() string {
 func (m Model) renderTopBar(width int) string {
 	summary := m.summary()
 
-	shipsIcon := lipgloss.NewStyle().
+	shipsIcon := iconCell(icons.ships, lipgloss.NewStyle().
 		Background(lipgloss.Color(colorBackground)).
-		Foreground(lipgloss.Color(colorOnline)).
-		Render(icons.ships)
-	containersIcon := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(colorOnline)))
+	containersIcon := iconCell(icons.containers, lipgloss.NewStyle().
 		Background(lipgloss.Color(colorBackground)).
-		Foreground(lipgloss.Color(namedShipAccents["romulus"])).
-		Render(icons.containers)
+		Foreground(lipgloss.Color(colorContainers)))
 
 	parts := []string{
 		fmt.Sprintf("%s %s SHIPS", shipsIcon, formatContainers(summary.onlineShips, summary.totalShips)),
@@ -85,7 +109,6 @@ func (m Model) renderTopBar(width int) string {
 	summaryLine := summaryStyle.Render(strings.Join(parts, "  |  "))
 
 	title := titleStyle.Render("FLEETGLANCE")
-	subtitle := subtitleStyle.Render("CONSOLE")
 
 	maxSummaryWidth := max(width-lipgloss.Width(title)-2, 0)
 	if maxSummaryWidth == 0 {
@@ -97,7 +120,7 @@ func (m Model) renderTopBar(width int) string {
 	spaces := max(width-lipgloss.Width(title)-lipgloss.Width(summaryLine), 1)
 	top := title + strings.Repeat(" ", spaces) + summaryLine
 
-	return topBarStyle.Width(width).Render(lipgloss.JoinVertical(lipgloss.Left, top, subtitle))
+	return topBarStyle.Width(width).Render(top)
 }
 
 func (m Model) renderGrid(width int, layout gridLayout) string {
@@ -111,18 +134,17 @@ func (m Model) renderGrid(width int, layout gridLayout) string {
 	for i := 0; i < len(m.shipNames); i += columns {
 		end := min(i+columns, len(m.shipNames))
 		panes := make([]string, 0, end-i)
-		for _, name := range m.shipNames[i:end] {
-			panes = append(panes, renderPane(m.ships[name], layout.paneWidth, layout.paneHeight, layout.compact))
+		for offset, name := range m.shipNames[i:end] {
+			panes = append(panes, renderPane(m.ships[name], i+offset, layout.paneWidth, layout.paneHeight, layout.compact))
 		}
 
 		rows = append(rows, joinPanes(panes))
 	}
 
-	return strings.Join(rows, strings.Repeat("\n", gridRowGap+1))
+	return strings.Join(rows, strings.Repeat("\n", gridGapY+1))
 }
 
 func chooseGridLayout(width int, height int, count int) gridLayout {
-	count = min(count, MaxShips)
 	if count <= 0 {
 		return gridLayout{columns: 1, paneWidth: max(width, minPaneWidth), paneHeight: compactPaneHeight, compact: true}
 	}
@@ -140,7 +162,7 @@ func chooseGridLayout(width int, height int, count int) gridLayout {
 			}
 
 			rows := rowsFor(count, columns)
-			neededHeight := rows*paneHeight + max(rows-1, 0)*gridRowGap
+			neededHeight := rows*paneHeight + max(rows-1, 0)*gridGapY
 			if neededHeight <= height {
 				return gridLayout{
 					columns:    columns,
@@ -154,7 +176,7 @@ func chooseGridLayout(width int, height int, count int) gridLayout {
 
 	columns := bestColumnsForWidth(width, count)
 	rows := rowsFor(count, columns)
-	gaps := max(rows-1, 0) * gridRowGap
+	gaps := max(rows-1, 0) * gridGapY
 	paneHeight := max((height-gaps)/rows, 1)
 
 	return gridLayout{
@@ -165,22 +187,47 @@ func chooseGridLayout(width int, height int, count int) gridLayout {
 	}
 }
 
-func renderPane(ship shipState, width int, outerHeight int, compact bool) string {
-	accent := shipAccent(ship.name)
-	contentWidth := max(width-2, 1)
-	contentHeight := max(outerHeight-2, 1)
+func renderPane(ship shipState, index int, width int, outerHeight int, compact bool) string {
+	accent := shipAccentByIndex(index)
+	paddingY := paneVerticalPadding(outerHeight, compact)
+	contentWidth := max(width-2-(panePaddingX*2), 1)
+	contentHeight := max(outerHeight-2-(paddingY*2), 1)
 
 	lines := renderPaneLines(ship, contentWidth, accent, compact)
+	if compact && len(lines)+1 <= contentHeight {
+		lines = addPaneHeaderGap(lines, contentWidth)
+	}
 	if len(lines) > contentHeight {
 		lines = lines[:contentHeight]
 	}
 
 	return panelStyle.
-		Width(contentWidth).
-		Height(contentHeight).
-		MaxHeight(contentHeight + 2).
+		Width(max(width-2, 1)).
+		Height(max(outerHeight-2, 1)).
+		MaxHeight(max(outerHeight, 1)).
+		Padding(paddingY, panePaddingX).
 		BorderForeground(lipgloss.Color(accent)).
 		Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
+}
+
+func addPaneHeaderGap(lines []string, width int) []string {
+	if len(lines) == 0 {
+		return lines
+	}
+
+	spaced := make([]string, 0, len(lines)+1)
+	spaced = append(spaced, lines[0], fillLine("", width))
+	spaced = append(spaced, lines[1:]...)
+
+	return spaced
+}
+
+func paneVerticalPadding(outerHeight int, compact bool) int {
+	if compact && outerHeight < compactPaneHeight {
+		return 0
+	}
+
+	return panePaddingY
 }
 
 func renderPaneLines(ship shipState, width int, accent string, compact bool) []string {
@@ -214,12 +261,10 @@ func renderPaneLines(ship shipState, width int, accent string, compact bool) []s
 }
 
 func renderPaneHeader(ship shipState, width int, accent string) string {
-	icon := lipgloss.NewStyle().
-		Background(lipgloss.Color(colorBackground)).
-		Foreground(lipgloss.Color(accent)).
-		Render(icons.ship)
-	name := lipgloss.NewStyle().
-		Background(lipgloss.Color(colorBackground)).
+	icon := iconCell(icons.ship, lipgloss.NewStyle().
+		Background(lipgloss.Color(colorPanelBackground)).
+		Foreground(lipgloss.Color(accent)))
+	name := headerStyle.
 		Foreground(lipgloss.Color(accent)).
 		Bold(true).
 		Render(ship.name)
@@ -236,7 +281,7 @@ func renderStatusRow(ship shipState, width int) string {
 func renderUptimeRow(ship shipState, width int) string {
 	value := dimValueStyle.Render("--")
 	if ship.telemetry != nil {
-		value = mutedValueStyle.Render(formatUptime(ship.telemetry.UptimeSeconds))
+		value = valueStyle.Render(formatUptime(ship.telemetry.UptimeSeconds))
 	}
 
 	return renderValueRow(icons.uptime, "UPTIME", value, width)
@@ -248,35 +293,51 @@ func renderContainersRow(ship shipState, width int) string {
 		value = valueStyle.Render(formatContainers(ship.telemetry.Containers.Running, ship.telemetry.Containers.Total))
 	}
 
-	return renderValueRow(icons.containers, "CONTAINERS", value, width)
+	return renderValueRow(icons.containers, "CONT", value, width)
 }
 
 func renderValueRow(icon string, label string, value string, width int) string {
-	left := rowLabel(icon, label, width)
-	return fillLine(joinLeftRight(left, value, width), width)
-}
-
-func renderMetricRow(icon string, label string, value *float64, color string, width int) string {
-	left := rowLabel(icon, label, width)
-	if value == nil {
-		return fillLine(joinLeftRight(left, dimValueStyle.Render("--"), width), width)
-	}
-
-	percent := valueStyle.Render(formatPercent(*value))
-	barWidth := width - lipgloss.Width(left) - lipgloss.Width(percent) - 3
-	if barWidth < 5 {
-		return fillLine(joinLeftRight(left, percent, width), width)
-	}
-
-	right := renderProgressBar(*value, barWidth, color) + " " + percent
+	left := rowLabel(icon, label, valueLabelWidth(label, width))
+	right := valueCell(value, valueWidth(width, lipgloss.Width(left), lipgloss.Width(value)))
 	return fillLine(joinLeftRight(left, right, width), width)
 }
 
-func rowLabel(icon string, label string, rowWidth int) string {
-	iconText := neutralIconStyle.Render(icon)
-	width := labelWidth(label, rowWidth)
-	labelText := labelStyle.Width(width).MaxWidth(width).Render(labelTextForWidth(label, width))
+func renderMetricRow(icon string, label string, value *float64, color string, width int) string {
+	if value == nil {
+		left := rowLabel(icon, label, metricLabelWidth)
+		right := valueCell(dimValueStyle.Render("--"), valueWidth(width, lipgloss.Width(left), 2))
+		return fillLine(joinLeftRight(left, right, width), width)
+	}
+
+	formatted := formatPercent(*value)
+	labelWidth := metricLabelColumnWidth(label, width)
+	leftWidth := rowLabelWidth(labelWidth)
+	left := rowLabel(icon, label, labelWidth)
+	left = rowStyle.Inline(true).Width(leftWidth).MaxWidth(leftWidth).Render(left)
+	percent := valueCell(valueStyle.Render(formatted), metricPercentWidth)
+	barWidth := width - leftWidth - metricBarGap - 1 - metricPercentWidth
+	if barWidth < minProgressBarLen {
+		return fillLine(joinLeftRight(left, percent, width), width)
+	}
+
+	bar := renderProgressBar(*value, barWidth, color)
+	right := strings.Repeat(" ", metricBarGap) + bar + " " + percent
+	return fillLine(left+right, width)
+}
+
+func rowLabel(icon string, label string, width int) string {
+	iconText := iconCell(icon, neutralIconStyle)
+	labelText := labelStyle.Inline(true).Width(width).MaxWidth(width).Render(label)
 	return iconText + " " + labelText
+}
+
+func iconCell(icon string, style lipgloss.Style) string {
+	return style.
+		Inline(true).
+		Width(iconColWidth).
+		MaxWidth(iconColWidth).
+		Align(lipgloss.Center).
+		Render(icon)
 }
 
 func joinPanes(panes []string) string {
@@ -284,7 +345,7 @@ func joinPanes(panes []string) string {
 		return ""
 	}
 
-	gap := contentStyle.Render(strings.Repeat(" ", gridGap))
+	gap := contentStyle.Render(strings.Repeat(" ", gridGapX))
 	row := panes[0]
 	for _, pane := range panes[1:] {
 		row = lipgloss.JoinHorizontal(lipgloss.Top, row, gap, pane)
@@ -316,11 +377,11 @@ func renderProgressBar(value float64, width int, color string) string {
 	}
 
 	fill := lipgloss.NewStyle().
-		Background(lipgloss.Color(colorBackground)).
+		Background(lipgloss.Color(color)).
 		Foreground(lipgloss.Color(color)).
 		Render(strings.Repeat("█", filled))
 	empty := lipgloss.NewStyle().
-		Background(lipgloss.Color(colorBackground)).
+		Background(lipgloss.Color(colorChartBackground)).
 		Render(strings.Repeat(" ", width-filled))
 
 	return fill + empty
@@ -353,6 +414,10 @@ func metricValue(ship shipState, metric string) *float64 {
 }
 
 func statusStyle(ship shipState) lipgloss.Style {
+	if !ship.seen {
+		return mutedValueStyle
+	}
+
 	if ship.online() {
 		return onlineStyle
 	}
@@ -378,7 +443,7 @@ func joinLeftRight(left string, right string, width int) string {
 }
 
 func fillLine(line string, width int) string {
-	return contentStyle.Width(width).MaxWidth(width).Render(line)
+	return rowStyle.Width(width).MaxWidth(width).Render(line)
 }
 
 func (m Model) screenSize() (int, int) {
@@ -398,8 +463,8 @@ func (m Model) screenSize() (int, int) {
 func horizontalPadding(width int) int {
 	switch {
 	case width >= 120:
-		return 4
-	case width >= 70:
+		return screenPaddingX
+	case width >= 80:
 		return 2
 	default:
 		return 1
@@ -407,6 +472,10 @@ func horizontalPadding(width int) int {
 }
 
 func verticalPadding(height int) int {
+	if height >= 24 {
+		return screenPaddingY
+	}
+
 	if height >= 18 {
 		return 1
 	}
@@ -429,42 +498,52 @@ func paneWidthForColumns(width int, columns int) int {
 		return max(min(width, preferredPaneWidth), 1)
 	}
 
-	return max(min((width-gridGap*(columns-1))/columns, preferredPaneWidth), 1)
+	return max(min((width-gridGapX*(columns-1))/columns, preferredPaneWidth), 1)
 }
 
 func rowsFor(count int, columns int) int {
 	return (count + columns - 1) / columns
 }
 
-func labelWidth(label string, rowWidth int) int {
-	if rowWidth < 22 {
-		return 4
+func valueLabelWidth(label string, rowWidth int) int {
+	if rowWidth >= iconColWidth+1+metricLabelWidth+1+metricValueWidth {
+		return metricLabelWidth
 	}
 
-	if rowWidth < 30 {
-		return 6
-	}
-
-	if len(label) > 6 {
-		return 10
-	}
-
-	return 6
+	return max(min(metricLabelWidth, max(lipgloss.Width(label), 1)), 1)
 }
 
-func labelTextForWidth(label string, width int) string {
-	if width >= len(label) {
-		return label
+func metricLabelColumnWidth(label string, rowWidth int) int {
+	fullLeftWidth := rowLabelWidth(metricLabelWidth)
+	if rowWidth-fullLeftWidth-metricBarGap-1-metricPercentWidth >= minProgressBarLen {
+		return metricLabelWidth
 	}
 
-	switch label {
-	case "STATUS":
-		return "STAT"
-	case "UPTIME":
-		return "UP"
-	case "CONTAINERS":
-		return "CONT"
-	default:
-		return label[:width]
+	return max(min(metricLabelWidth, lipgloss.Width(label)), 1)
+}
+
+func rowLabelWidth(labelWidth int) int {
+	return iconColWidth + 1 + labelWidth
+}
+
+func valueWidth(rowWidth int, leftWidth int, valueTextWidth int) int {
+	available := rowWidth - leftWidth - 1
+	if available <= 0 {
+		return 1
 	}
+
+	if available >= metricValueWidth {
+		return metricValueWidth
+	}
+
+	return max(min(available, valueTextWidth), 1)
+}
+
+func valueCell(value string, width int) string {
+	return rowStyle.
+		Inline(true).
+		Width(max(width, 1)).
+		MaxWidth(max(width, 1)).
+		Align(lipgloss.Right).
+		Render(value)
 }

@@ -5,6 +5,7 @@ import "time"
 const (
 	defaultPullInterval = 5 * time.Second
 	defaultTimeout      = 2 * time.Second
+	MaxShips            = 8
 )
 
 type Fleet struct {

@@ -1,7 +1,6 @@
 package console
 
 import (
-	"fmt"
 	"sync"
 
 	"fleetglance/internal/console/config"
@@ -29,8 +28,7 @@ type Console struct {
 // to call more than once, but restarting requires creating a new Console.
 func NewConsole(fleet *config.Fleet) *Console {
 	return &Console{
-		fleet:  fleet,
-		engine: engine.New(fleet),
+		fleet: fleet,
 		programOptions: []tea.ProgramOption{
 			tea.WithAltScreen(),
 			tea.WithoutSignalHandler(),
@@ -46,11 +44,15 @@ func (c *Console) Start() error {
 	if err := config.ValidateFleet(c.fleet); err != nil {
 		return err
 	}
-	if len(c.fleet.Ships) > ui.MaxShips {
-		return fmt.Errorf("fleet supports at most %d ships", ui.MaxShips)
-	}
 
-	events, err := c.engine.Start()
+	c.mu.Lock()
+	if c.engine == nil {
+		c.engine = engine.New(c.fleet)
+	}
+	currentEngine := c.engine
+	c.mu.Unlock()
+
+	events, err := currentEngine.Start()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to start engine")
 		return err
@@ -89,20 +91,22 @@ func (c *Console) Stop() error {
 	c.stopOnce.Do(func() {
 		log.Info().Msg("Stopping console...")
 
-		err := c.engine.Stop()
-		if err != nil {
-			log.Warn().Err(err).Msg("Failed to stop engine")
-		}
-
 		c.mu.Lock()
+		currentEngine := c.engine
 		program := c.program
 		c.mu.Unlock()
+
+		if currentEngine != nil {
+			if err := currentEngine.Stop(); err != nil {
+				log.Warn().Err(err).Msg("Failed to stop engine")
+				c.stopErr = err
+			}
+		}
 
 		if program != nil {
 			program.Quit()
 		}
 
-		c.stopErr = err
 		log.Info().Msg("Stopping console... DONE")
 	})
 

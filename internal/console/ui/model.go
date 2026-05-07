@@ -19,8 +19,6 @@ type Model struct {
 	ships     map[string]shipState
 }
 
-const MaxShips = 8
-
 type shipState struct {
 	name      string
 	telemetry *protocol.Telemetry
@@ -44,9 +42,6 @@ func NewModel(fleet *config.Fleet) Model {
 		}
 	}
 	sort.Strings(names)
-	if len(names) > MaxShips {
-		names = names[:MaxShips]
-	}
 
 	ships := make(map[string]shipState, len(names))
 	for _, name := range names {
@@ -124,6 +119,10 @@ func (s shipState) online() bool {
 }
 
 func (s shipState) statusLabel() string {
+	if !s.seen {
+		return "PENDING"
+	}
+
 	if s.online() {
 		return "ONLINE"
 	}
@@ -132,6 +131,10 @@ func (s shipState) statusLabel() string {
 }
 
 func (s shipState) statusValue() string {
+	if !s.seen {
+		return "--"
+	}
+
 	if s.online() {
 		return "OK"
 	}

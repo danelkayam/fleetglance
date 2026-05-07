@@ -44,19 +44,10 @@ var namedShipAccents = map[string]string{
 	"serenity":  "#FF8A00",
 }
 
-var namedShipIcons = map[string]string{
-	"donnager":  "✣",
-	"rocinante": "✦",
-	"romulus":   "✚",
-	"nostromo":  "☼",
-	"tycho":     "⬡",
-	"betty":     "◎",
-	"serenity":  "✤",
-}
-
 type iconSet struct {
 	ships      string
 	containers string
+	ship       string
 	status     string
 	cpu        string
 	ram        string
@@ -65,13 +56,14 @@ type iconSet struct {
 }
 
 var icons = iconSet{
-	ships:      "✦",
-	containers: "◇",
-	status:     "◎",
-	cpu:        "▣",
-	ram:        "▤",
-	disk:       "▬",
-	uptime:     "◷",
+	ships:      "",
+	containers: "",
+	ship:       "",
+	status:     "",
+	cpu:        "",
+	ram:        "󰘚",
+	disk:       "",
+	uptime:     "",
 }
 
 var (
@@ -150,13 +142,4 @@ func shipAccent(name string) string {
 	_, _ = hash.Write([]byte(normalized))
 
 	return shipAccentColors[int(hash.Sum32())%len(shipAccentColors)]
-}
-
-func shipIcon(name string) string {
-	normalized := strings.ToLower(strings.TrimSpace(name))
-	if icon, ok := namedShipIcons[normalized]; ok {
-		return icon
-	}
-
-	return "✦"
 }

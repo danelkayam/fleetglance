@@ -217,7 +217,7 @@ func renderPaneHeader(ship shipState, width int, accent string) string {
 	icon := lipgloss.NewStyle().
 		Background(lipgloss.Color(colorBackground)).
 		Foreground(lipgloss.Color(accent)).
-		Render(shipIcon(ship.name))
+		Render(icons.ship)
 	name := lipgloss.NewStyle().
 		Background(lipgloss.Color(colorBackground)).
 		Foreground(lipgloss.Color(accent)).

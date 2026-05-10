@@ -1,7 +1,11 @@
 *.out
+coverage.*
+*.coverprofile
+profile.cov
 *.md
 *.log
 *.swp
+*.test
 *.exe
 *.exe~
 *.dll
@@ -9,7 +13,9 @@
 *.dylib
 *.tar.gz
 
+.agents/
 .cache/
+.codex/
 .data/
 .idea/
 .vscode/
@@ -18,7 +24,11 @@
 .editorconfig
 .dockerignore
 .env*
+go.work
+go.work.sum
+fleet*.yaml
 
 bin/
 bin-tools/
+build/
 docker/

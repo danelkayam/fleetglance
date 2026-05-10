@@ -227,7 +227,7 @@ func TestMetricRowsAlignBarsAndReservePercentWidth(t *testing.T) {
 		t.Fatalf("metric row should reserve width for 100.0%%; got %q", rows[3])
 	}
 
-	wantBarWidth := width - rowLabelWidth(metricLabelWidth) - metricBarGap - 1 - metricPercentWidth
+	wantBarWidth := width - rowLabelWidth(metricBarLabelWidth) - metricBarGap - 1 - metricPercentWidth
 	if got := strings.Count(plain, "█"); got != wantBarWidth {
 		t.Fatalf("full bar width = %d, want %d in row %q", got, wantBarWidth, rows[3])
 	}

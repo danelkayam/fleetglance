@@ -87,7 +87,6 @@ func (m Model) View() string {
 		lipgloss.Left,
 		lipgloss.Top,
 		content,
-		lipgloss.WithWhitespaceBackground(lipgloss.Color(colorBackground)),
 	))
 }
 
@@ -95,10 +94,8 @@ func (m Model) renderTopBar(width int) string {
 	summary := m.summary()
 
 	shipsIcon := iconCell(icons.ships, lipgloss.NewStyle().
-		Background(lipgloss.Color(colorBackground)).
 		Foreground(lipgloss.Color(colorOnline)))
 	containersIcon := iconCell(icons.containers, lipgloss.NewStyle().
-		Background(lipgloss.Color(colorBackground)).
 		Foreground(lipgloss.Color(colorContainers)))
 
 	parts := []string{
@@ -263,7 +260,6 @@ func renderPaneLines(ship shipState, width int, accent string, compact bool) []s
 
 func renderPaneHeader(ship shipState, width int, accent string) string {
 	icon := iconCell(icons.ship, lipgloss.NewStyle().
-		Background(lipgloss.Color(colorPanelBackground)).
 		Foreground(lipgloss.Color(accent)))
 	name := headerStyle.
 		Foreground(lipgloss.Color(accent)).
@@ -385,11 +381,9 @@ func renderProgressBar(value float64, width int, color string) string {
 	}
 
 	fill := lipgloss.NewStyle().
-		Background(lipgloss.Color(color)).
 		Foreground(lipgloss.Color(color)).
 		Render(strings.Repeat("█", filled))
 	empty := lipgloss.NewStyle().
-		Background(lipgloss.Color(colorChartBackground)).
 		Render(strings.Repeat(" ", width-filled))
 
 	return fill + empty

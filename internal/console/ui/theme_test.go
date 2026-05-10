@@ -6,18 +6,6 @@ import (
 	"testing"
 )
 
-func TestBackgroundLayersAreDistinct(t *testing.T) {
-	if colorPanelBackground == colorBackground {
-		t.Fatalf("panel background should differ from app background: %s", colorPanelBackground)
-	}
-	if colorChartBackground == colorBackground {
-		t.Fatalf("chart background should differ from app background: %s", colorChartBackground)
-	}
-	if colorChartBackground == colorPanelBackground {
-		t.Fatalf("chart background should differ from panel background: %s", colorChartBackground)
-	}
-}
-
 func TestThemeDoesNotHardcodeShipAccentNames(t *testing.T) {
 	source, err := os.ReadFile("theme.go")
 	if err != nil {
@@ -42,7 +30,7 @@ func TestShipAccentByIndexWrapsPalette(t *testing.T) {
 	}
 }
 
-func TestProgressBarEmptyAreaUsesBackgroundOnly(t *testing.T) {
+func TestProgressBarEmptyAreaUsesSpaces(t *testing.T) {
 	bar := renderProgressBar(25, 8, colorCPU)
 
 	if containsRune(bar, '░') {

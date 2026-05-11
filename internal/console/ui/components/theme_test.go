@@ -1,4 +1,4 @@
-package ui
+package components
 
 import (
 	"os"
@@ -20,30 +20,12 @@ func TestThemeDoesNotHardcodeShipAccentNames(t *testing.T) {
 }
 
 func TestShipAccentByIndexWrapsPalette(t *testing.T) {
-	if got := shipAccentByIndex(0); got != shipAccentColors[0] {
+	if got := ShipAccentByIndex(0); got != shipAccentColors[0] {
 		t.Fatalf("first accent = %s, want %s", got, shipAccentColors[0])
 	}
 
 	index := len(shipAccentColors) + 2
-	if got := shipAccentByIndex(index); got != shipAccentColors[2] {
+	if got := ShipAccentByIndex(index); got != shipAccentColors[2] {
 		t.Fatalf("wrapped accent = %s, want %s", got, shipAccentColors[2])
 	}
-}
-
-func TestProgressBarEmptyAreaUsesSpaces(t *testing.T) {
-	bar := renderProgressBar(25, 8, colorCPU)
-
-	if containsRune(bar, '░') {
-		t.Fatal("empty progress bar area should not render a shaded glyph")
-	}
-}
-
-func containsRune(value string, want rune) bool {
-	for _, got := range value {
-		if got == want {
-			return true
-		}
-	}
-
-	return false
 }

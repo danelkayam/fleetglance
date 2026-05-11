@@ -1,4 +1,4 @@
-package ui
+package components
 
 import "testing"
 
@@ -16,8 +16,8 @@ func TestFormatPercent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := formatPercent(tt.value); got != tt.want {
-				t.Fatalf("formatPercent(%v) = %q, want %q", tt.value, got, tt.want)
+			if got := FormatPercent(tt.value); got != tt.want {
+				t.Fatalf("FormatPercent(%v) = %q, want %q", tt.value, got, tt.want)
 			}
 		})
 	}
@@ -37,15 +37,15 @@ func TestFormatUptime(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := formatUptime(tt.seconds); got != tt.want {
-				t.Fatalf("formatUptime(%d) = %q, want %q", tt.seconds, got, tt.want)
+			if got := FormatUptime(tt.seconds); got != tt.want {
+				t.Fatalf("FormatUptime(%d) = %q, want %q", tt.seconds, got, tt.want)
 			}
 		})
 	}
 }
 
 func TestFormatContainers(t *testing.T) {
-	if got := formatContainers(18, 24); got != "18/24" {
-		t.Fatalf("formatContainers(18, 24) = %q, want %q", got, "18/24")
+	if got := FormatContainers(18, 24); got != "18/24" {
+		t.Fatalf("FormatContainers(18, 24) = %q, want %q", got, "18/24")
 	}
 }

@@ -1,4 +1,4 @@
-package ui
+package components
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func formatPercent(value float64) string {
+func FormatPercent(value float64) string {
 	if math.IsNaN(value) || math.IsInf(value, 0) {
 		value = 0
 	}
@@ -22,7 +22,7 @@ func formatPercent(value float64) string {
 	return fmt.Sprintf("%.1f%%", value)
 }
 
-func formatUptime(seconds int64) string {
+func FormatUptime(seconds int64) string {
 	if seconds <= 0 {
 		return "0m"
 	}
@@ -44,6 +44,6 @@ func formatUptime(seconds int64) string {
 	}
 }
 
-func formatContainers(running int, total int) string {
+func FormatContainers(running int, total int) string {
 	return fmt.Sprintf("%d/%d", running, total)
 }

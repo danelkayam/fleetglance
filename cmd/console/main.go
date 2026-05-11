@@ -41,6 +41,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := config.ValidateFleet(fleet); err != nil {
+		log.Error().Err(err).Msg("Failed validating fleet config")
+		os.Exit(1)
+	}
+
 	c := console.NewConsole(fleet)
 
 	errChan := make(chan error, 1)

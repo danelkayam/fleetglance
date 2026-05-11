@@ -17,9 +17,7 @@ type Console struct {
 	program        *tea.Program
 	programOptions []tea.ProgramOption
 
-	mu       sync.Mutex
 	stopOnce sync.Once
-	stopErr  error
 }
 
 // NewConsole creates a single-use console runtime.
@@ -28,7 +26,8 @@ type Console struct {
 // to call more than once, but restarting requires creating a new Console.
 func NewConsole(fleet *config.Fleet) *Console {
 	return &Console{
-		fleet: fleet,
+		fleet:  fleet,
+		engine: engine.New(fleet),
 		programOptions: []tea.ProgramOption{
 			tea.WithAltScreen(),
 			tea.WithoutSignalHandler(),
@@ -36,81 +35,53 @@ func NewConsole(fleet *config.Fleet) *Console {
 	}
 }
 
-// Start validates the fleet config, starts the engine and UI, and blocks until
-// the UI exits or Stop is called.
+// Start starts the engine and UI, and blocks until the UI exits or Stop is
+// called.
 func (c *Console) Start() error {
 	log.Info().Msg("Starting console...")
 
-	if err := config.ValidateFleet(c.fleet); err != nil {
-		return err
-	}
-
-	c.mu.Lock()
-	if c.engine == nil {
-		c.engine = engine.New(c.fleet)
-	}
-	currentEngine := c.engine
-	c.mu.Unlock()
-
-	events, err := currentEngine.Start()
+	events, err := c.engine.Start()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to start engine")
 		return err
 	}
 
 	model := ui.NewModel(c.fleet)
-	program := tea.NewProgram(model, c.programOptions...)
+	c.program = tea.NewProgram(model, c.programOptions...)
 	runErr := make(chan error, 1)
 
-	c.mu.Lock()
-	c.program = program
-	c.mu.Unlock()
-
 	go func() {
-		_, err := program.Run()
+		_, err := c.program.Run()
 		runErr <- err
 	}()
 
-	go forwardEvents(program, events)
+	go forwardEvents(c.program, events)
 
 	log.Info().Msg("Starting console... DONE")
 
 	err = <-runErr
-
-	c.mu.Lock()
-	if c.program == program {
-		c.program = nil
-	}
-	c.mu.Unlock()
 
 	return err
 }
 
 // Stop stops the engine and unblocks Start. It is safe to call more than once.
 func (c *Console) Stop() error {
+	var err error
+
 	c.stopOnce.Do(func() {
 		log.Info().Msg("Stopping console...")
 
-		c.mu.Lock()
-		currentEngine := c.engine
-		program := c.program
-		c.mu.Unlock()
-
-		if currentEngine != nil {
-			if err := currentEngine.Stop(); err != nil {
-				log.Warn().Err(err).Msg("Failed to stop engine")
-				c.stopErr = err
-			}
+		err = c.engine.Stop()
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to stop engine")
 		}
 
-		if program != nil {
-			program.Quit()
-		}
+		c.program.Quit()
 
 		log.Info().Msg("Stopping console... DONE")
 	})
 
-	return c.stopErr
+	return err
 }
 
 func forwardEvents(program *tea.Program, events <-chan engine.Event) {

@@ -49,12 +49,14 @@ func main() {
 		errChan <- a.Start()
 	}()
 
+	exitCode := 0
 	select {
 	case sig := <-termChan:
 		log.Info().Str("signal", sig.String()).Msg("Received shutdown signal")
 	case err := <-errChan:
 		if err != nil {
 			log.Error().Err(err).Msg("Agent stopped with error")
+			exitCode = 1
 		}
 	}
 
@@ -62,9 +64,12 @@ func main() {
 
 	if err := a.Stop(); err != nil {
 		log.Error().Err(err).Msg("Failed stopping fleetglance agent")
+		exitCode = 1
 	}
 
 	log.Info().Msg("Shutting down fleetglance agent... DONE")
+
+	os.Exit(exitCode)
 }
 
 func loadParams() (*Params, error) {

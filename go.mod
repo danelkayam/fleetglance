@@ -12,6 +12,7 @@ require (
 	github.com/moby/moby/client v0.4.1
 	github.com/rs/zerolog v1.35.1
 	github.com/shirou/gopsutil/v4 v4.26.4
+	github.com/urfave/cli/v3 v3.8.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

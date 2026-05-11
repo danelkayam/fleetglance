@@ -1,10 +1,13 @@
 package main
 
 import (
-	"flag"
+	"context"
+	"errors"
 	"fleetglance/internal/console"
 	"fleetglance/internal/console/config"
+	"fleetglance/internal/version"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,6 +17,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/urfave/cli/v3"
 )
 
 type Params struct {
@@ -22,12 +26,47 @@ type Params struct {
 }
 
 func main() {
-	params, err := loadParams(os.Args[1:])
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading parameters: %v\n", err)
+	if err := newCommand(os.Stdout, os.Stderr, startConsole).Run(context.Background(), os.Args); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+}
 
+func newCommand(out io.Writer, errOut io.Writer, run func(*Params) error) *cli.Command {
+	return &cli.Command{
+		Name:        "fleetglance-console",
+		Usage:       "run the Fleetglance console",
+		Writer:      out,
+		ErrWriter:   errOut,
+		HideVersion: true,
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:  "version",
+				Usage: "print version information and exit",
+			},
+			&cli.StringFlag{
+				Name:    "config",
+				Aliases: []string{"f"},
+				Usage:   "path to fleet config file",
+			},
+		},
+		Action: func(_ context.Context, cmd *cli.Command) error {
+			if cmd.Bool("version") {
+				_, err := fmt.Fprint(out, version.Format("Console"))
+				return err
+			}
+
+			params, err := resolveParams(cmd)
+			if err != nil {
+				return fmt.Errorf("load parameters: %w", err)
+			}
+
+			return run(params)
+		},
+	}
+}
+
+func startConsole(params *Params) error {
 	// init logger
 	if params.LogFormat == "console" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
@@ -38,12 +77,12 @@ func main() {
 	fleet, err := config.LoadFleet(params.ConfigPath)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed loading fleet config")
-		os.Exit(1)
+		return fmt.Errorf("load fleet config: %w", err)
 	}
 
 	if err := config.ValidateFleet(fleet); err != nil {
 		log.Error().Err(err).Msg("Failed validating fleet config")
-		os.Exit(1)
+		return fmt.Errorf("validate fleet config: %w", err)
 	}
 
 	c := console.NewConsole(fleet)
@@ -58,14 +97,14 @@ func main() {
 		errChan <- c.Start()
 	}()
 
-	exitCode := 0
+	var runErr error
 	select {
 	case sig := <-termChan:
 		log.Info().Str("signal", sig.String()).Msg("Received shutdown signal")
 	case err := <-errChan:
 		if err != nil {
 			log.Error().Err(err).Msg("Console stopped with error")
-			exitCode = 1
+			runErr = fmt.Errorf("start console: %w", err)
 		}
 	}
 
@@ -73,41 +112,26 @@ func main() {
 
 	if err := c.Stop(); err != nil {
 		log.Error().Err(err).Msg("Failed stopping fleetglance console")
-		exitCode = 1
+		stopErr := fmt.Errorf("stop console: %w", err)
+		if runErr != nil {
+			return errors.Join(runErr, stopErr)
+		}
+		return stopErr
 	}
 
 	log.Info().Msg("Shutting down fleetglance console... DONE")
 
-	if exitCode != 0 {
-		os.Exit(exitCode)
-	}
+	return runErr
 }
 
-func loadParams(args []string) (*Params, error) {
-	// Optional local development file.
-	// Missing .env should not fail the service.
-	_ = godotenv.Load(".env")
-
-	params, err := env.ParseAs[Params]()
+func resolveParams(cmd *cli.Command) (*Params, error) {
+	params, err := loadParams()
 	if err != nil {
-		return nil, fmt.Errorf("parse env: %w", err)
+		return nil, err
 	}
 
-	flags := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-	configPathFlag := flags.String("f", "", "path to fleet config file")
-	if err := flags.Parse(args); err != nil {
-		return nil, fmt.Errorf("parse flags: %w", err)
-	}
-
-	flagProvided := false
-	flags.Visit(func(f *flag.Flag) {
-		if f.Name == "f" {
-			flagProvided = true
-		}
-	})
-
-	if flagProvided {
-		params.ConfigPath = *configPathFlag
+	if cmd.IsSet("config") {
+		params.ConfigPath = cmd.String("config")
 	}
 
 	if params.ConfigPath == "" {
@@ -116,6 +140,19 @@ func loadParams(args []string) (*Params, error) {
 
 	if err := validator.New().Struct(params); err != nil {
 		return nil, fmt.Errorf("validate params: %w", err)
+	}
+
+	return params, nil
+}
+
+func loadParams() (*Params, error) {
+	// Optional local development file.
+	// Missing .env should not fail the service.
+	_ = godotenv.Load(".env")
+
+	params, err := env.ParseAs[Params]()
+	if err != nil {
+		return nil, fmt.Errorf("parse env: %w", err)
 	}
 
 	return &params, nil

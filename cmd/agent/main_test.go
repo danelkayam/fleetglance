@@ -1,6 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"context"
+	"errors"
+	"fleetglance/internal/version"
 	"os"
 	"strings"
 	"testing"
@@ -96,6 +100,86 @@ func TestLoadParamsRejectsInvalidEnv(t *testing.T) {
 				t.Fatalf("expected error containing %q, got %q", tt.wantErr, err.Error())
 			}
 		})
+	}
+}
+
+func TestCommandPrintsVersionAndSkipsRuntime(t *testing.T) {
+	withoutDotEnv(t)
+	unsetAgentEnv(t)
+	t.Setenv("PORT", "not-a-number")
+
+	oldVersion := version.Version
+	oldCommit := version.Commit
+	oldBuiltAt := version.BuiltAt
+	t.Cleanup(func() {
+		version.Version = oldVersion
+		version.Commit = oldCommit
+		version.BuiltAt = oldBuiltAt
+	})
+
+	version.Version = "v1.2.3"
+	version.Commit = "abc1234"
+	version.BuiltAt = "2026-05-11T10:00:00Z"
+
+	var out bytes.Buffer
+	runErr := errors.New("runtime should not start")
+	cmd := newCommand(&out, &bytes.Buffer{}, func(*Params) error {
+		return runErr
+	})
+
+	if err := cmd.Run(context.Background(), []string{"fleetglance-agent", "--version"}); err != nil {
+		t.Fatalf("run command: %v", err)
+	}
+
+	want := "Fleetglance Agent\nversion=v1.2.3\ncommit=abc1234\nbuilt_at=2026-05-11T10:00:00Z\n"
+	if out.String() != want {
+		t.Fatalf("expected version output %q, got %q", want, out.String())
+	}
+}
+
+func TestCommandLoadsParamsBeforeRuntime(t *testing.T) {
+	withoutDotEnv(t)
+	unsetAgentEnv(t)
+	t.Setenv("PORT", "1234")
+	t.Setenv("DEBUG", "true")
+	t.Setenv("LOG_FORMAT", "json")
+
+	var got *Params
+	cmd := newCommand(&bytes.Buffer{}, &bytes.Buffer{}, func(params *Params) error {
+		got = params
+		return nil
+	})
+
+	if err := cmd.Run(context.Background(), []string{"fleetglance-agent"}); err != nil {
+		t.Fatalf("run command: %v", err)
+	}
+
+	if got == nil {
+		t.Fatal("expected runtime to receive params")
+	}
+	if got.Port != 1234 {
+		t.Fatalf("expected port 1234, got %d", got.Port)
+	}
+	if !got.Debug {
+		t.Fatal("expected debug true")
+	}
+	if got.LogFormat != "json" {
+		t.Fatalf("expected log format %q, got %q", "json", got.LogFormat)
+	}
+}
+
+func TestCommandReturnsRuntimeError(t *testing.T) {
+	withoutDotEnv(t)
+	unsetAgentEnv(t)
+
+	runErr := errors.New("runtime failed")
+	cmd := newCommand(&bytes.Buffer{}, &bytes.Buffer{}, func(*Params) error {
+		return runErr
+	})
+
+	err := cmd.Run(context.Background(), []string{"fleetglance-agent"})
+	if !errors.Is(err, runErr) {
+		t.Fatalf("expected runtime error %v, got %v", runErr, err)
 	}
 }
 

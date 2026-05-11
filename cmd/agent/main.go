@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fleetglance/internal/agent"
+	"fleetglance/internal/version"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,6 +16,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/urfave/cli/v3"
 )
 
 type Params struct {
@@ -21,12 +26,42 @@ type Params struct {
 }
 
 func main() {
-	params, err := loadParams()
-	if err != nil {
-		fmt.Printf("Error loading parameters: %v\n", err)
-		return
+	if err := newCommand(os.Stdout, os.Stderr, startAgent).Run(context.Background(), os.Args); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
 	}
+}
 
+func newCommand(out io.Writer, errOut io.Writer, run func(*Params) error) *cli.Command {
+	return &cli.Command{
+		Name:        "fleetglance-agent",
+		Usage:       "run the Fleetglance telemetry agent",
+		Writer:      out,
+		ErrWriter:   errOut,
+		HideVersion: true,
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:  "version",
+				Usage: "print version information and exit",
+			},
+		},
+		Action: func(_ context.Context, cmd *cli.Command) error {
+			if cmd.Bool("version") {
+				_, err := fmt.Fprint(out, version.Format("Agent"))
+				return err
+			}
+
+			params, err := loadParams()
+			if err != nil {
+				return fmt.Errorf("load parameters: %w", err)
+			}
+
+			return run(params)
+		},
+	}
+}
+
+func startAgent(params *Params) error {
 	// init logger
 	if params.LogFormat == "console" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
@@ -49,14 +84,14 @@ func main() {
 		errChan <- a.Start()
 	}()
 
-	exitCode := 0
+	var runErr error
 	select {
 	case sig := <-termChan:
 		log.Info().Str("signal", sig.String()).Msg("Received shutdown signal")
 	case err := <-errChan:
 		if err != nil {
 			log.Error().Err(err).Msg("Agent stopped with error")
-			exitCode = 1
+			runErr = fmt.Errorf("start agent: %w", err)
 		}
 	}
 
@@ -64,12 +99,16 @@ func main() {
 
 	if err := a.Stop(); err != nil {
 		log.Error().Err(err).Msg("Failed stopping fleetglance agent")
-		exitCode = 1
+		stopErr := fmt.Errorf("stop agent: %w", err)
+		if runErr != nil {
+			return errors.Join(runErr, stopErr)
+		}
+		return stopErr
 	}
 
 	log.Info().Msg("Shutting down fleetglance agent... DONE")
 
-	os.Exit(exitCode)
+	return runErr
 }
 
 func loadParams() (*Params, error) {

@@ -24,6 +24,6 @@ FROM alpine:3.23
 
 WORKDIR /app
 
-COPY --from=builder /build/bin/agent /app/agent
+COPY --from=builder /build/bin/fleetglance-agent /app/agent
 
 CMD ["/app/agent"]

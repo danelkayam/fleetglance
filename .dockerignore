@@ -31,4 +31,5 @@ fleet*.yaml
 bin/
 bin-tools/
 build/
+dist/
 docker/

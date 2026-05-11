@@ -33,6 +33,7 @@ go.work.sum
 bin/
 bin-tools/
 build/
+dist/
 .env
 fleetglance*.tar.gz
 fleet*.yaml

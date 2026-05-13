@@ -33,3 +33,4 @@ bin-tools/
 build/
 dist/
 docker/
+docs/

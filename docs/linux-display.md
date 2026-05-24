@@ -4,7 +4,7 @@ Fleetglance is designed to work well on a Linux machine connected to a display.
 
 This can be a Raspberry Pi, mini PC, old laptop, or any small Linux machine.
 
-> Tested it only on Raspberry Pi 4 with cheap "7 800x480 display. Higher resultion displays will result better visuality.
+> Tested only on a Raspberry Pi 4 with a cheap 7-inch 800x480 display. Higher-resolution displays will provide better visual quality.
 
 ## Recommended setup
 
@@ -150,7 +150,7 @@ Add:
 # Start Fleetglance graphical kiosk only on the local console.
 # SSH sessions should remain normal.
 if [ -z "$SSH_CONNECTION" ] && [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
-  # hacky waiting system to finish booting
+  # # Give the system a few seconds to finish booting.
   sleep 5
 
   startx

@@ -8,9 +8,7 @@ It runs an agent on each monitored machine and a console on a Linux machine with
 
 ## Status
 
-Fleetglance is in rapid development and is currently pre-release.
-
-Expect breaking changes, incomplete documentation, and rough edges.
+Fleetglance is early-stage software. Expect breaking changes, incomplete documentation, and rough edges.
 
 ## Features
 
@@ -26,7 +24,7 @@ Expect breaking changes, incomplete documentation, and rough edges.
 - Supports up to 8 ships in the current console layout.
 - Designed for local/self-hosted networks.
 - No authentication or TLS handling is provided by Fleetglance itself.
-- Different theme and color pallete is not supported yet.
+- Custom themes and color palettes are not supported yet.
 
 ## Architecture
 
